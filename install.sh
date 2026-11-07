@@ -14,6 +14,14 @@ PANEL_PORT=8000
 # ---- helpers ----
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
+# .env ထဲ key တစ်ခု ထည့်/ပြင် — comment ဖြစ်နေရင် uncomment လုပ်၊ မရှိရင် အသစ်ထည့်
+set_env() {
+  if grep -q "^#* *$1 *=" "$APP_DIR/.env"; then
+    sed -i "s|^#* *$1 *=.*|$1 = \"$2\"|" "$APP_DIR/.env"
+  else
+    echo "$1 = \"$2\"" >> "$APP_DIR/.env"
+  fi
+}
 
 # ---- checks ----
 # root မဟုတ်ရင် docker ရော compose ရော သွင်းလို့မရဘူး
@@ -54,15 +62,82 @@ mkdir -p "$TEMPLATE_DIR"
 curl -fsSL "$REPO_RAW/templates/subscription/index.html" -o "$TEMPLATE_DIR/index.html"
 (cd "$APP_DIR" && docker compose restart)
 
-# ---- wait + report ----
+# ---- wait ----
 # container တက်လာတာ ခဏ စောင့်တာ — မတက်သေးရင်လည်း message က print ပြီးသား
 for _ in $(seq 1 30); do
   if curl -s -o /dev/null "http://127.0.0.1:$PANEL_PORT/dashboard"; then break; fi
   sleep 2
 done
 IP="$(curl -fsSL https://api.ipify.org 2>/dev/null || hostname -I | awk '{print $1}')"
+
+# ---- domain + ssl ----
+# Domain ရှိရင် ဒီတစ်ခေါက်တည်းမှာ SSL ပါ ခံပေးတာ — panel ကို http/IP နဲ့
+# internet ပေါ် ဒီအတိုင်း ဖွင့်မထားစေချင်လို့ (2026-11-07 သူ့အမိန့်)။
+# Domain မပေးရင် ဒီအဆင့် ကျော်ပြီး http panel ပဲ ရမယ်။
+DOMAIN=""
+if [ -e /dev/tty ]; then
+  printf 'Domain ရှိလား (ဥပမာ vpn.example.com) — SSL ခံပေးမယ်၊ မရှိရင် Enter ပဲ နှိပ်ပါ: '
+  read -r DOMAIN < /dev/tty || DOMAIN=""
+fi
+SSL_OK=""
+if [ -n "$DOMAIN" ]; then
+  echo "$DOMAIN" | grep -qE '^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || die "Domain ပုံစံ မမှန်ဘူး: $DOMAIN"
+  if grep -q '^UVICORN_SSL_CERTFILE' "$APP_DIR/.env"; then
+    say "SSL ခံပြီးသားပဲ — ဒီအဆင့် ကျော်မယ်"
+    SSL_OK="1"
+  else
+    # DNS က ဒီ server ဆီ မရောက်ရင် cert ထုတ်တာ ကျိန်းသေ fail မယ် — အရင် စစ်တာ
+    RESOLVED="$(getent hosts "$DOMAIN" | awk '{print $1}' | head -n 1)"
+    if [ "$RESOLVED" != "$IP" ]; then
+      say "သတိ: $DOMAIN က $RESOLVED ဆီ point နေတယ်၊ ဒီ server က $IP — DNS အရင် ပြင်ပြီးမှ script ပြန် run ပါ။ SSL ကျော်လိုက်မယ်"
+    else
+      command -v certbot >/dev/null 2>&1 || { say "certbot သွင်းနေတယ်…"; apt-get update -qq && apt-get install -y -qq certbot; }
+      CERT_DIR="$DATA_DIR/certs"
+      mkdir -p "$CERT_DIR"
+      if [ ! -f "$CERT_DIR/$DOMAIN.cert.pem" ]; then
+        say "Let's Encrypt cert ထုတ်နေတယ် ($DOMAIN)…"
+        # port 80 လွတ်နေမှ standalone ရတယ် — fresh VPS မှာ ပုံမှန် လွတ်နေကျ
+        certbot certonly --standalone -d "$DOMAIN" --agree-tos --register-unsafely-without-email --non-interactive \
+          || say "cert ထုတ် မရဘူး — port 80 / DNS စစ်ပြီး script ပြန် run ပါ။ SSL ကျော်လိုက်မယ်"
+        if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+          cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$CERT_DIR/$DOMAIN.cert.pem"
+          cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$CERT_DIR/$DOMAIN.key.pem"
+          chmod 600 "$CERT_DIR/$DOMAIN.key.pem"
+          # cert သက်တမ်း တိုးတိုင်း Marzban ဘက် copy + restart အလိုအလျောက် ဖြစ်အောင် hook ချန်ခဲ့တာ
+          mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+          cat > /etc/letsencrypt/renewal-hooks/deploy/marzban-certs.sh <<EOF
+#!/usr/bin/env bash
+cp "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" "$CERT_DIR/$DOMAIN.cert.pem"
+cp "/etc/letsencrypt/live/$DOMAIN/privkey.pem" "$CERT_DIR/$DOMAIN.key.pem"
+(cd "$APP_DIR" && docker compose up -d)
+EOF
+          chmod +x /etc/letsencrypt/renewal-hooks/deploy/marzban-certs.sh
+        fi
+      fi
+      if [ -f "$CERT_DIR/$DOMAIN.cert.pem" ]; then
+        set_env UVICORN_SSL_CERTFILE "/var/lib/marzban/certs/$DOMAIN.cert.pem"
+        set_env UVICORN_SSL_KEYFILE "/var/lib/marzban/certs/$DOMAIN.key.pem"
+        # ဒါမပါရင် sub link တွေမှာ URL အပြည့် မပါဘူး (ကိုယ်တိုင် ကြုံဖူးတဲ့ lesson)
+        set_env XRAY_SUBSCRIPTION_URL_PREFIX "https://$DOMAIN:$PANEL_PORT"
+        say "SSL နဲ့ panel ပြန်တင်နေတယ်…"
+        (cd "$APP_DIR" && docker compose up -d)
+        for _ in $(seq 1 30); do
+          if curl -sk -o /dev/null "https://127.0.0.1:$PANEL_PORT/dashboard"; then break; fi
+          sleep 2
+        done
+        SSL_OK="1"
+      fi
+    fi
+  fi
+fi
+
+# ---- report ----
 echo
 say "ပြီးပါပြီ ✅"
-echo "Panel:   http://$IP:$PANEL_PORT/dashboard"
+if [ -n "$SSL_OK" ]; then
+  echo "Panel:   https://$DOMAIN:$PANEL_PORT/dashboard"
+else
+  echo "Panel:   http://$IP:$PANEL_PORT/dashboard"
+  echo "မှတ်ချက်: production သုံးမယ်ဆို domain + SSL ခံပြီးမှ သုံးပါ (README မှာ အသေးစိတ် ရှိတယ်)"
+fi
 echo "Admin အရင် ဆောက်ပါ:   marzban cli admin create --sudo"
-echo "မှတ်ချက်: production သုံးမယ်ဆို domain + SSL ခံပြီးမှ သုံးပါ (README မှာ အသေးစိတ် ရှိတယ်)"

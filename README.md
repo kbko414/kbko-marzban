@@ -26,7 +26,7 @@ Marzban VPN panel ကို **KBKO subscription page** နဲ့အတူ comman
 bash <(curl -fsSL https://raw.githubusercontent.com/kbko414/kbko-marzban/main/install.sh)
 ```
 
-ပြီးသွားရင် terminal မှာ panel လိပ်စာ ပေါ်လာမယ် — ဥပမာ `http://YOUR_IP:8000/dashboard`
+သွင်းနေရင်း **domain မေးပါမယ်** — domain ကို VPS IP ဆီ အရင် point ထားပြီး ရိုက်ထည့်လိုက်ရင် Let's Encrypt SSL အထိ တစ်ခါတည်း ပြီးသွားမယ်။ Domain မရှိသေးရင် Enter ပဲ နှိပ်ပါ၊ panel လိပ်စာ `http://YOUR_IP:8000/dashboard` ရမယ်။
 
 ## သွင်းပြီးရင် လုပ်ရန်
 
@@ -36,22 +36,22 @@ bash <(curl -fsSL https://raw.githubusercontent.com/kbko414/kbko-marzban/main/in
 marzban cli admin create --sudo
 ```
 
-**၂။ Domain + SSL ခံပါ (production သုံးမယ်ဆို မဖြစ်မနေ)**
+**၂။ Domain + SSL (installer က မလုပ်ခဲ့ရင် manual)**
 
-Panel ကို IP + http နဲ့ ဒီအတိုင်း internet ဖွင့်ထားတာ မလုံခြုံဘူး။ Domain တစ်ခုကို VPS IP ဆီ point လုပ်ပြီး `.env` ထဲမှာ ဒါတွေ ဖြည့်ပါ —
+Installer run တုန်းက domain ပေးခဲ့ရင် ဒီအဆင့် ပြီးပြီးသား — cert သက်တမ်းတိုးတိုင်းလည်း Marzban ဘက်ကို အလိုအလျောက် လဲပေးတဲ့ renewal hook ပါ ထည့်ပေးထားတယ်။
+
+Manual လုပ်ချင်ရင် domain ကို VPS IP ဆီ point ပြီး `.env` ( /opt/marzban/.env ) ထဲမှာ ဒါတွေ ဖြည့်ပါ —
 
 ```
-UVICORN_HOST = "0.0.0.0"
-UVICORN_PORT = 8000
 UVICORN_SSL_CERTFILE = "/var/lib/marzban/certs/YOUR_DOMAIN.cert.pem"
 UVICORN_SSL_KEYFILE = "/var/lib/marzban/certs/YOUR_DOMAIN.key.pem"
 XRAY_SUBSCRIPTION_URL_PREFIX = "https://YOUR_DOMAIN:8000"
 ```
 
-Cert ကို `marzban` CLI ထဲက SSL ထုတ်တဲ့ command ဒါမှမဟုတ် certbot နဲ့ ထုတ်လို့ရတယ်။ ပြီးရင် —
+Cert ကို certbot နဲ့ ထုတ်ပြီး `/var/lib/marzban/certs/` ထဲ copy ထည့်၊ ပြီးရင် —
 
 ```bash
-marzban restart
+cd /opt/marzban && docker compose up -d
 ```
 
 `XRAY_SUBSCRIPTION_URL_PREFIX` မထည့်ရင် subscription link တွေထဲမှာ URL အပြည့်အစုံ မပါဘဲ page ပဲ ပေါ်နေတတ်တယ် — ကိုယ့် domain နဲ့ ထည့်ထားတာ အကောင်းဆုံးပဲ။
