@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KBKO VPN — {{ user.username }}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body {
+    font-family:-apple-system,"Segoe UI","Noto Sans Myanmar","Myanmar Text",sans-serif;
+    background:#0b0e14; color:#e8eaf0; line-height:1.7; min-height:100vh;
+  }
+  .wrap { max-width:640px; margin:0 auto; padding:0 18px 40px; }
+  header.hero {
+    text-align:center; padding:44px 18px 28px;
+    background:radial-gradient(ellipse at 50% 0%, #1c2742 0%, #0b0e14 70%);
+  }
+  .logo {
+    font-size:38px; font-weight:800; letter-spacing:2px;
+    background:linear-gradient(135deg,#f5d67b,#c9962e);
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  .tagline { color:#aab2c5; margin-top:6px; font-size:15px; }
+  .card {
+    background:#121826; border:1px solid #232c47; border-radius:14px;
+    padding:18px; margin-top:14px;
+  }
+  .user-row { display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  .username { font-size:20px; font-weight:800; word-break:break-all; user-select:text; }
+  .status {
+    font-size:13px; font-weight:700; padding:4px 12px; border-radius:20px; white-space:nowrap;
+  }
+  .st-active   { border:1px solid #22c55e66; background:#22c55e22; color:#4ade80; }
+  .st-limited  { border:1px solid #ea580c66; background:#ea580c22; color:#fb923c; }
+  .st-expired  { border:1px solid #eab30866; background:#eab30822; color:#facc15; }
+  .st-disabled { border:1px solid #ef444466; background:#ef444422; color:#f87171; }
+  .alert {
+    border:1px solid #c9962e; background:#161d2e; border-radius:12px;
+    padding:14px 16px; margin-top:14px; font-size:15px;
+  }
+  .alert a { color:#f5d67b; font-weight:700; }
+  h3.sec { font-size:17px; color:#f5d67b; margin-bottom:12px; }
+  .big-usage { font-size:26px; font-weight:800; }
+  .lite { font-size:14px; color:#8b95ad; }
+  .bar { height:12px; border-radius:8px; background:#232c47; overflow:hidden; margin-top:12px; }
+  .bar-fill { height:100%; border-radius:8px; background:linear-gradient(135deg,#f5d67b,#c9962e); }
+  .bar-fill.danger { background:linear-gradient(135deg,#ff7171,#ff4848); }
+  .bar-row { display:flex; justify-content:space-between; font-size:13px; color:#8b95ad; margin-top:6px; }
+  .expire-val { font-size:20px; font-weight:800; color:#f5d67b; }
+  .sub-url {
+    background:#0b0e14; border:1px solid #232c47; border-radius:10px;
+    padding:12px; font-size:13px; word-break:break-all; user-select:all; text-align:center;
+  }
+  .btn-row { display:flex; gap:10px; margin-top:12px; }
+  .btn {
+    flex:1; display:inline-block; text-align:center; padding:12px 10px; border-radius:12px;
+    font-size:15px; font-weight:700; text-decoration:none; cursor:pointer; border:none;
+    font-family:inherit;
+  }
+  .btn-gold  { background:linear-gradient(135deg,#f5d67b,#c9962e); color:#1a1405; }
+  .btn-ghost { border:1px solid #2a3350; color:#e8eaf0; background:#121826; }
+  .btn-green { background:linear-gradient(135deg,#2d7038,#4fac57); color:#fff; }
+  .app-group { margin-top:6px; }
+  .app-group + .app-group { margin-top:18px; border-top:1px solid #232c47; padding-top:16px; }
+  .app-title { font-weight:700; font-size:16px; margin-bottom:10px; }
+  .cfg {
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    background:#0b0e14; border:1px solid #232c47; border-radius:10px;
+    padding:10px 14px; margin-bottom:8px; font-size:14px;
+  }
+  .cfg-name { word-break:break-all; }
+  .cfg button {
+    flex-shrink:0; background:#161d2e; border:1px solid #c9962e; color:#f5d67b;
+    border-radius:8px; padding:6px 14px; font-weight:700; cursor:pointer; font-family:inherit; font-size:13px;
+  }
+  footer { text-align:center; padding:28px 18px 10px; color:#5d6578; font-size:13px; }
+  footer a { color:#c9962e; text-decoration:none; }
+  .modal {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.8);
+    align-items:center; justify-content:center; z-index:50; padding:20px;
+  }
+  .modal-box { background:#fff; border-radius:16px; padding:22px; text-align:center; }
+  .modal-box p { color:#333; font-size:14px; margin-top:10px; }
+  .toast {
+    display:none; position:fixed; left:50%; bottom:26px; transform:translateX(-50%);
+    background:#161d2e; border:1px solid #c9962e; color:#f5d67b; font-weight:700;
+    padding:10px 22px; border-radius:20px; z-index:60; font-size:14px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="logo">KBKO VPN</div>
+  <div class="tagline">မြန်ဆန်တယ် · စျေးသက်သာတယ် · စိတ်ချရတယ်</div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div class="user-row">
+      <div class="username">{{ user.username }}</div>
+      <div>
+        {% if user.status == 'active' %}<span class="status st-active">အသုံးပြုနေဆဲ</span>{% endif %}
+        {% if user.status == 'limited' %}<span class="status st-limited">Data ကုန်ပြီ</span>{% endif %}
+        {% if user.status == 'expired' %}<span class="status st-expired">သက်တမ်းကုန်ပြီ</span>{% endif %}
+        {% if user.status == 'disabled' %}<span class="status st-disabled">ပိတ်ထားသည်</span>{% endif %}
+        {% if user.status == 'on_hold' %}<span class="status st-limited">ခေတ္တရပ်ထားသည်</span>{% endif %}
+      </div>
+    </div>
+
+    {% if user.status in ['expired', 'limited', 'disabled'] %}
+    <div class="alert">
+      အကောင့် ဆက်သုံးလို့မရသေးပါ — သက်တမ်းတိုး / Data ထပ်ဖြည့်ဖို့
+      <a href="https://t.me/KBKO_VPN_BOT">@KBKO_VPN_BOT</a> မှာ လုပ်ပါ။
+    </div>
+    {% endif %}
+
+    <div style="margin-top:16px;">
+      <h3 class="sec">📊 Data အသုံးပြုမှု</h3>
+      {% if user.status == 'limited' %}
+      <div class="big-usage">Data limit ပြည့်သွားပါပြီ</div>
+      <div class="lite">စုစုပေါင်း: {{ user.data_limit | bytesformat }}</div>
+      {% else %}
+      {% if user.data_limit %}
+      {% set percent = (user.used_traffic / user.data_limit) * 100 %}
+      {% if percent > 100 %}{% set percent = 100 %}{% endif %}
+      <div class="big-usage">{{ user.used_traffic | bytesformat }} <span class="lite">/ {{ user.data_limit | bytesformat }}</span></div>
+      <div class="bar"><div class="bar-fill{% if percent >= 90 %} danger{% endif %}" style="width:{{ percent }}%"></div></div>
+      <div class="bar-row">
+        <span>{{ percent | int }}% သုံးပြီး</span>
+        {% set remaining_traffic = user.data_limit - user.used_traffic %}
+        {% if remaining_traffic > 0 %}<span>{{ remaining_traffic | bytesformat }} ကျန်သေးတယ်</span>{% endif %}
+      </div>
+      {% else %}
+      <div class="big-usage">{{ user.used_traffic | bytesformat }}</div>
+      <div class="lite">စုစုပေါင်း: Unlimited</div>
+      {% endif %}
+      {% endif %}
+    </div>
+
+    <div style="margin-top:18px; border-top:1px solid #232c47; padding-top:14px;">
+      <h3 class="sec">⏰ သက်တမ်း</h3>
+      {% if user.status == 'expired' %}
+      <div class="expire-val">သက်တမ်းကုန်သွားပါပြီ</div>
+      {% elif user.expire %}
+      <div class="expire-val" id="expirationValue"></div>
+      <div class="lite" id="expireDate"></div>
+      {% else %}
+      <div class="expire-val">သက်တမ်းအကန့်အသတ်မရှိ</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="sec">🔗 Subscription လင့်ခ်</h3>
+    <div class="sub-url">{{ user.subscription_url }}</div>
+    <div class="btn-row">
+      <button class="btn btn-gold" onclick="copyText('{{ user.subscription_url }}')">📋 ကူးမယ်</button>
+      <button class="btn btn-ghost" onclick="showQRCode('{{ user.subscription_url }}')">QR ပြမယ်</button>
+    </div>
+    <div class="btn-row">
+      <a class="btn btn-ghost" href="https://t.me/KBKO_VPN_BOT">🤖 Bot မှာ သက်တမ်းတိုးမယ်</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="sec">📲 App ထဲ တစ်ချက်နှိပ် ထည့်မယ်</h3>
+
+    <div class="app-group">
+      <div class="app-title">Android</div>
+      <div class="btn-row" style="margin-top:0;">
+        <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=com.v2ray.ang">v2rayNG ဒေါင်းရန်</a>
+        <a class="btn btn-ghost" href="https://play.google.com/store/apps/details?id=app.hiddify.com">Hiddify ဒေါင်းရန်</a>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="window.open('v2rayng://install-config?url={{ user.subscription_url }}#{{ user.username }}')">＋ v2rayNG ထဲ ထည့်မယ်</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="window.open('hiddify://import/{{ user.subscription_url }}#{{ user.username }}')">＋ Hiddify ထဲ ထည့်မယ်</button>
+      </div>
+    </div>
+
+    <div class="app-group">
+      <div class="app-title">iPhone / iPad</div>
+      <div class="btn-row" style="margin-top:0;">
+        <a class="btn btn-ghost" href="https://apps.apple.com/us/app/streisand/id6450534064">Streisand ဒေါင်းရန်</a>
+        <a class="btn btn-ghost" href="https://apps.apple.com/us/app/hiddify-proxy-vpn/id6596777532">Hiddify ဒေါင်းရန်</a>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="window.open('streisand://import/{{ user.subscription_url }}#{{ user.username }}')">＋ Streisand ထဲ ထည့်မယ်</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" onclick="window.open('hiddify://import/{{ user.subscription_url }}#{{ user.username }}')">＋ Hiddify ထဲ ထည့်မယ်</button>
+      </div>
+    </div>
+
+    <div class="app-group">
+      <div class="app-title">Windows</div>
+      <div class="btn-row" style="margin-top:0;">
+        <a class="btn btn-ghost" href="https://github.com/2dust/v2rayN/releases">v2rayN ဒေါင်းရန်</a>
+        <a class="btn btn-ghost" href="https://hiddify.com/">Hiddify ဒေါင်းရန်</a>
+      </div>
+      <p class="lite" style="margin-top:10px;">Windows မှာတော့ Subscription လင့်ခ်ကို ကူးပြီး app ထဲမှာ Import from clipboard လုပ်ပါ။</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3 class="sec">🖥️ Config များ (တစ်ခုချင်း ကူးရန်)</h3>
+    <div id="proxyList"></div>
+  </div>
+
+  <footer>© KBKO VPN · အကူအညီလိုရင် <a href="https://t.me/KBKO_VPN_BOT">@KBKO_VPN_BOT</a></footer>
+</div>
+
+<div class="modal" id="qrModal" onclick="hideQRCode()">
+  <div class="modal-box">
+    <div id="qrcode"></div>
+    <p>App ထဲက QR Scan နဲ့ ဖတ်ပြီး ထည့်ပါ</p>
+  </div>
+</div>
+<div class="toast" id="toast">ကူးပြီးပါပြီ ✅</div>
+
+<script>
+  function showToast() {
+    const t = document.getElementById('toast');
+    t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 1600);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text).then(showToast);
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); showToast();
+    }
+  }
+  function showQRCode(url) {
+    const box = document.getElementById('qrcode');
+    box.innerHTML = '';
+    new QRCode(box, { text: url, width: 220, height: 220 });
+    document.getElementById('qrModal').style.display = 'flex';
+  }
+  function hideQRCode() { document.getElementById('qrModal').style.display = 'none'; }
+
+  function getTimeLeft(expireTimestamp) {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = expireTimestamp - now;
+    if (diff <= 0) return 'သက်တမ်းကုန်သွားပါပြီ';
+    const days = Math.floor(diff / 86400);
+    const hours = Math.floor((diff % 86400) / 3600);
+    if (days > 0) return days + ' ရက် ကျန်သေးတယ်';
+    if (hours > 0) return hours + ' နာရီ ကျန်သေးတယ်';
+    return Math.floor(diff / 60) + ' မိနစ် ကျန်သေးတယ်';
+  }
+  function formatDateTime(ts) {
+    const d = new Date(ts * 1000);
+    return 'ကုန်ဆုံးရက်: ' + d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+  }
+  {% if user.expire %}
+  document.getElementById('expirationValue').textContent = getTimeLeft({{ user.expire }});
+  document.getElementById('expireDate').textContent = formatDateTime({{ user.expire }});
+  {% endif %}
+
+  const links = {{ user.links | tojson }};
+  const list = document.getElementById('proxyList');
+  links.forEach(function(link) {
+    let name = link;
+    const hash = link.indexOf('#');
+    if (hash >= 0) {
+      try { name = decodeURIComponent(link.substring(hash + 1)); } catch(e) { name = link.substring(hash + 1); }
+    }
+    const row = document.createElement('div');
+    row.className = 'cfg';
+    const span = document.createElement('span');
+    span.className = 'cfg-name'; span.textContent = name;
+    const btn = document.createElement('button');
+    btn.textContent = 'ကူးမယ်';
+    btn.onclick = function() { copyText(link); };
+    row.appendChild(span); row.appendChild(btn);
+    list.appendChild(row);
+  });
+  if (!links.length) list.innerHTML = '<p class="lite">Config မရှိသေးပါ</p>';
+</script>
+</body>
+</html>
