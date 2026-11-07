@@ -1,5 +1,12 @@
 # KBKO Marzban — One-Line Installer
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Shell](https://img.shields.io/badge/Shell-Bash-4EAA25?logo=gnubash&logoColor=white)
+![Platform](https://img.shields.io/badge/Platform-Ubuntu%20%7C%20Debian-E95420?logo=ubuntu&logoColor=white)
+![Panel](https://img.shields.io/badge/Panel-Marzban-blue)
+
+**One command. Full VPN panel. Burmese subscription page included.**
+
 Marzban VPN panel ကို **KBKO subscription page** နဲ့အတူ command တစ်ကြောင်းတည်းနဲ့ သွင်းပေးတဲ့ installer ပါ။
 
 - ✅ Marzban panel (official Docker image — SQLite)
